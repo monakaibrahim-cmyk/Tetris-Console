@@ -25,7 +25,11 @@ int main(int argc, char** argv)
     nodelay(stdscr, TRUE);
     curs_set(0); // Hide cursor
 
-    Game game;
+    ConfigManager config("config.ini");
+    KeyBindings bindings;
+    config.Load(bindings);
+
+    Game game(config, bindings);
     game.Run();
 
     endwin();

@@ -11,6 +11,8 @@
 #include "core/discord/discord_manager.hpp"
 #endif
 
+#include "core/audio/audio_manager.hpp"
+
 const int TETROMINO[7][16] = {
     {0,0,0,0, 1,1,1,1, 0,0,0,0, 0,0,0,0}, // I
     {0,0,0,0, 0,1,1,0, 0,1,1,0, 0,0,0,0}, // O
@@ -21,9 +23,18 @@ const int TETROMINO[7][16] = {
     {0,0,0,0, 0,0,1,0, 1,1,1,0, 0,0,0,0}  // L
 };
 
-Game::Game() : m_currentState(GameState::Menu), m_score(0), m_level(1), m_linesClearedTotal(0), m_currentPiece(0), m_currentRotation(0), m_currentX(0), m_currentY(0), m_nextPiece(0), m_dropTimer(0)
+Game::Game(const ConfigManager& config, const KeyBindings& bindings) : m_currentState(GameState::Menu), m_previousState(GameState::Menu), m_score(0), m_level(1), m_linesClearedTotal(0), m_currentPiece(0), m_currentRotation(0), m_currentX(0), m_currentY(0), m_nextPiece(0), m_dropTimer(0),
+               m_optionIndex(0), m_isBinding(false), m_config(config)
 {
     std::srand(std::time(nullptr));
+
+    m_keyLeft = bindings.keyLeft;
+    m_keyRight = bindings.keyRight;
+    m_keySoftDrop = bindings.keySoftDrop;
+    m_keyRotate = bindings.keyRotate;
+    m_keyHardDrop = bindings.keyHardDrop;
+    m_keyPause = bindings.keyPause;
+    m_keyQuit = bindings.keyQuit;
 
     if (has_colors()) {
         start_color();
@@ -47,7 +58,7 @@ void Game::UpdateDiscordPresence()
             break;
         case GameState::Playing:
         {
-            std::string details = "Score: " + std::to_string(m_score) + " | Lvl: " + std::to_string(m_level);
+            std::string details = "Score: " + std::to_string(m_score) + " | Level: " + std::to_string(m_level);
             core::DiscordManager::SetActivity("Playing Tetris", details.c_str(), "large", "Tetris");
             break;
         }
@@ -74,20 +85,95 @@ void Game::RunMenu()
     int startY = LINES / 2 - 2;
     mvprintw(startY, startX + 5, "TETRIS");
     mvprintw(startY + 2, startX - 2, "Press 'ENTER' to Start");
-    mvprintw(startY + 3, startX - 2, "Press 'q' to Quit");
+    mvprintw(startY + 3, startX - 2, "Press 'o' for Options");
+    mvprintw(startY + 4, startX - 2, "Press 'q' to Quit");
     refresh();
 
     int ch = getch();
     if (ch == '\n')
     {
+        core::AudioManager::PlayClickSound();
+        core::AudioManager::PlayGameMusic();
         clear();
         InitGame();
         m_currentState = GameState::Playing;
         UpdateDiscordPresence();
     }
+    else if (ch == 'o' || ch == 'O')
+    {
+        core::AudioManager::PlayClickSound();
+        m_previousState = m_currentState;
+        m_currentState = GameState::Options;
+        clear();
+    }
     else if (ch == 'q' || ch == 'Q')
     {
+        core::AudioManager::PlayClickSound();
         m_currentState = GameState::Quit;
+    }
+}
+
+void Game::RunOptions()
+{
+    int startX = COLS / 2 - 15;
+    int startY = LINES / 2 - 5;
+
+    mvprintw(startY, startX + 5, "OPTIONS / CONTROLS");
+
+    const char* labels[] = {
+        "Move Left:", "Move Right:", "Rotate:", "Soft Drop:", "Hard Drop:", "Pause:", "Quit:", "Back"
+    };
+    int* bindings[] = {
+        &m_keyLeft, &m_keyRight, &m_keyRotate, &m_keySoftDrop, &m_keyHardDrop, &m_keyPause, &m_keyQuit
+    };
+
+    for (int i = 0; i < 8; ++i) {
+        if (i == m_optionIndex) attron(A_REVERSE);
+
+        if (i < 7) {
+            const char* keyNameStr = keyname(*(bindings[i]));
+            mvprintw(startY + 2 + i, startX, "%-15s %s", labels[i], (m_isBinding && m_optionIndex == i) ? "<PRESS KEY>" : (keyNameStr ? keyNameStr : "UNKNOWN"));
+        } else {
+            mvprintw(startY + 2 + i, startX, "%s", labels[i]);
+        }
+
+        if (i == m_optionIndex) attroff(A_REVERSE);
+    }
+    refresh();
+
+    int ch = getch();
+    if (ch != ERR) {
+        if (m_isBinding) {
+            core::AudioManager::PlayClickSound();
+            *(bindings[m_optionIndex]) = ch;
+            m_isBinding = false;
+            
+            KeyBindings newBindings = {
+                m_keyLeft, m_keyRight, m_keySoftDrop,
+                m_keyRotate, m_keyHardDrop, m_keyPause, m_keyQuit
+            };
+            m_config.Save(newBindings);
+            
+            clear();
+        } else {
+            if (ch == KEY_UP) {
+                core::AudioManager::PlayClickSound();
+                m_optionIndex = (m_optionIndex > 0) ? m_optionIndex - 1 : 7;
+            } else if (ch == KEY_DOWN) {
+                core::AudioManager::PlayClickSound();
+                m_optionIndex = (m_optionIndex < 7) ? m_optionIndex + 1 : 0;
+            } else if (ch == '\n') {
+                core::AudioManager::PlayClickSound();
+                if (m_optionIndex == 7) {
+                    m_currentState = m_previousState;
+                    m_optionIndex = 0;
+                    clear();
+                } else {
+                    m_isBinding = true;
+                    clear();
+                }
+            }
+        }
     }
 }
 
@@ -150,6 +236,7 @@ void Game::SpawnPiece()
     // If we collide exactly when we spawn, the game is over
     if (CheckCollision(m_currentPiece, m_currentRotation, m_currentX, m_currentY)) {
         m_currentState = GameState::GameOver;
+        core::AudioManager::PlayGameOverMusic();
         clear();
         UpdateDiscordPresence();
     }
@@ -194,6 +281,7 @@ void Game::ClearLines()
     }
     
     if (linesCleared > 0) {
+        core::AudioManager::PlayLineClearSound();
         int lineScores[] = {0, 100, 300, 500, 800};
         int pointsEarned = lineScores[linesCleared] * m_level;
 
@@ -258,9 +346,9 @@ void Game::DrawBoard()
                 int drawX = m_currentX + px;
                 int drawY = ghostY + py;
                 if (drawY >= 0) {
-                    attron(COLOR_PAIR(m_currentPiece + 1) | A_DIM);
+                    attron(COLOR_PAIR(7) | A_DIM);
                     mvprintw(startY + drawY, startX + drawX * 2, "::");
-                    attroff(COLOR_PAIR(m_currentPiece + 1) | A_DIM);
+                    attroff(COLOR_PAIR(7) | A_DIM);
                 }
             }
         }
@@ -301,49 +389,53 @@ void Game::DrawBoard()
     mvprintw(startY + 10, startX + 24, "Lines: %-10d", m_linesClearedTotal);
     
     mvprintw(startY + 13, startX + 24, "Controls:");
-    mvprintw(startY + 14, startX + 24, "Left/Right: Move");
-    mvprintw(startY + 15, startX + 24, "Up: Rotate");
-    mvprintw(startY + 16, startX + 24, "Down: Soft Drop");
-    mvprintw(startY + 17, startX + 24, "Space: Hard Drop");
-    mvprintw(startY + 18, startX + 24, "p/ESC: Pause");
-    mvprintw(startY + 19, startX + 24, "q: Quit to Menu");
+    mvprintw(startY + 14, startX + 24, "%s/%s: Move", keyname(m_keyLeft), keyname(m_keyRight));
+    mvprintw(startY + 15, startX + 24, "%s: Rotate", keyname(m_keyRotate));
+    mvprintw(startY + 16, startX + 24, "%s: Soft Drop", keyname(m_keySoftDrop));
+    mvprintw(startY + 17, startX + 24, "%s: Hard Drop", keyname(m_keyHardDrop));
+    mvprintw(startY + 18, startX + 24, "%s/ESC: Pause", keyname(m_keyPause));
+    mvprintw(startY + 19, startX + 24, "%s: Quit to Menu", keyname(m_keyQuit));
 }
 
 void Game::RunGame()
 {
     int ch = getch();
-    if (ch == 'p' || ch == 'P' || ch == 27) // 27 is the ASCII code for ESC
+    if (ch == m_keyPause || ch == 27) // Keep 27 fallback for ESC
     {
+        core::AudioManager::PlayClickSound();
         m_currentState = GameState::Paused;
         clear();
         UpdateDiscordPresence();
     }
-    else if (ch == 'q' || ch == 'Q')
+    else if (ch == m_keyQuit)
     {
+        core::AudioManager::PlayClickSound();
+        core::AudioManager::PlayMenuMusic();
         m_currentState = GameState::Menu;
         clear();
         UpdateDiscordPresence();
     }
-    else if (ch == KEY_LEFT)
+    else if (ch == m_keyLeft)
     {
         if (!CheckCollision(m_currentPiece, m_currentRotation, m_currentX - 1, m_currentY))
             m_currentX--;
     }
-    else if (ch == KEY_RIGHT)
+    else if (ch == m_keyRight)
     {
         if (!CheckCollision(m_currentPiece, m_currentRotation, m_currentX + 1, m_currentY))
             m_currentX++;
     }
-    else if (ch == KEY_DOWN)
+    else if (ch == m_keySoftDrop)
     {
         if (!CheckCollision(m_currentPiece, m_currentRotation, m_currentX, m_currentY + 1))
         {
             m_currentY++;
         }
     }
-    else if (ch == KEY_UP)
+    else if (ch == m_keyRotate)
     {
         int nextRot = m_currentRotation + 1;
+        int oldRot = m_currentRotation;
         if (!CheckCollision(m_currentPiece, nextRot, m_currentX, m_currentY)) {
             m_currentRotation = nextRot;
         } else if (!CheckCollision(m_currentPiece, nextRot, m_currentX - 1, m_currentY)) {
@@ -355,14 +447,18 @@ void Game::RunGame()
         } else if (!CheckCollision(m_currentPiece, nextRot, m_currentX + 2, m_currentY)) {
             m_currentX += 2; m_currentRotation = nextRot; // Kick Right 2
         }
+        if (m_currentRotation != oldRot) {
+            core::AudioManager::PlayRotationSound();
+        }
     }
-    else if (ch == ' ')
+    else if (ch == m_keyHardDrop)
     {
         int dropped = 0;
         while (!CheckCollision(m_currentPiece, m_currentRotation, m_currentX, m_currentY + 1)) {
             m_currentY++;
             dropped++;
         }
+        core::AudioManager::PlayDropSound();
         LockPiece();
     }
 
@@ -392,19 +488,30 @@ void Game::RunPaused()
     int startX = COLS / 2 - 10;
     int startY = LINES / 2 - 2;
     mvprintw(startY, startX + 5, "PAUSED");
-    mvprintw(startY + 2, startX - 4, "Press 'p' or ESC to Resume");
-    mvprintw(startY + 3, startX - 3, "Press 'q' to Quit to Menu");
+    mvprintw(startY + 2, startX - 4, "Press '%s' or ESC to Resume", keyname(m_keyPause));
+    mvprintw(startY + 3, startX - 4, "Press 'o' for Options");
+    mvprintw(startY + 4, startX - 3, "Press '%s' to Quit to Menu", keyname(m_keyQuit));
     refresh();
 
     int ch = getch();
-    if (ch == 'p' || ch == 'P' || ch == 27)
+    if (ch == m_keyPause || ch == 27)
     {
+        core::AudioManager::PlayClickSound();
         m_currentState = GameState::Playing;
         clear();
         UpdateDiscordPresence();
     }
-    else if (ch == 'q' || ch == 'Q')
+    else if (ch == 'o' || ch == 'O')
     {
+        core::AudioManager::PlayClickSound();
+        m_previousState = m_currentState;
+        m_currentState = GameState::Options;
+        clear();
+    }
+    else if (ch == m_keyQuit)
+    {
+        core::AudioManager::PlayClickSound();
+        core::AudioManager::PlayMenuMusic();
         m_currentState = GameState::Menu;
         clear();
         UpdateDiscordPresence();
@@ -423,6 +530,8 @@ void Game::RunGameOver()
     int ch = getch();
     if (ch == '\n')
     {
+        core::AudioManager::PlayClickSound();
+        core::AudioManager::PlayMenuMusic();
         m_currentState = GameState::Menu;
         clear();
         UpdateDiscordPresence();
@@ -431,16 +540,21 @@ void Game::RunGameOver()
 
 void Game::Run()
 {
+    core::AudioManager::Init();
+    core::AudioManager::PlayMenuMusic();
     UpdateDiscordPresence();
     clear();
 
     while (m_currentState != GameState::Quit)
     {
         if (m_currentState == GameState::Menu) RunMenu();
+        else if (m_currentState == GameState::Options) RunOptions();
         else if (m_currentState == GameState::Playing) RunGame();
         else if (m_currentState == GameState::Paused) RunPaused();
         else if (m_currentState == GameState::GameOver) RunGameOver();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS
     }
+
+    core::AudioManager::Shutdown();
 }

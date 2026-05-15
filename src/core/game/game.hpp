@@ -1,8 +1,11 @@
 #pragma once
 
+#include "core/config/config_manager.hpp"
+
 enum class GameState
 {
     Menu,
+    Options,
     Playing,
     Paused,
     GameOver,
@@ -12,7 +15,7 @@ enum class GameState
 class Game
 {
 public:
-    Game();
+    Game(const ConfigManager& config, const KeyBindings& bindings);
     ~Game() = default;
 
     void Run();
@@ -20,6 +23,7 @@ public:
 private:
     void UpdateDiscordPresence();
     void RunMenu();
+    void RunOptions();
     void RunGame();
     void RunPaused();
     void RunGameOver();
@@ -33,6 +37,7 @@ private:
     int Rotate(int px, int py, int r);
 
     GameState m_currentState;
+    GameState m_previousState;
     int m_score;
     int m_level;
     int m_linesClearedTotal;
@@ -44,4 +49,17 @@ private:
     int m_currentY;
     int m_nextPiece;
     int m_dropTimer;
+
+    // Key bindings
+    int m_keyLeft;
+    int m_keyRight;
+    int m_keySoftDrop;
+    int m_keyRotate;
+    int m_keyHardDrop;
+    int m_keyPause;
+    int m_keyQuit;
+    int m_optionIndex;
+    bool m_isBinding;
+    
+    ConfigManager m_config;
 };
