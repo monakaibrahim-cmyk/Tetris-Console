@@ -27,9 +27,11 @@ int main(int argc, char** argv)
 
     core::ConfigManager config("config.ini");
     core::KeyBindings bindings;
+
     config.Load(bindings);
 
     core::Game game(config, bindings);
+
     game.Run();
 
     endwin();

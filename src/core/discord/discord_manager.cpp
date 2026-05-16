@@ -16,12 +16,16 @@ namespace core
         static std::atomic<bool> g_running{false};
         static std::mutex g_mutex;
 
+        /**
+         * @brief A background thread loop that periodically runs Discord SDK callbacks.
+         */
         static void UpdateLoop()
         {
             while (g_running)
             {
                 {
                     std::lock_guard<std::mutex> lock(g_mutex);
+
                     if (g_core)
                     {
                         g_core->RunCallbacks();
@@ -32,6 +36,9 @@ namespace core
             }
         }
 
+        /**
+         * @brief Initializes the Discord Game SDK and starts the background callback thread.
+         */
         void Init()
         {
             auto result = discord::Core::Create(DISCORD_CLIENT_ID, static_cast<std::uint64_t>(discord::CreateFlags::NoRequireDiscord), &g_core);
@@ -42,7 +49,8 @@ namespace core
                 return;
             }
 
-            g_core->SetLogHook(discord::LogLevel::Debug, [](discord::LogLevel level, const char* message) {
+            g_core->SetLogHook(discord::LogLevel::Debug, [](discord::LogLevel level, const char* message)
+            {
                 std::cout << "Discord Log[" << static_cast<int>(level) << "]: " << message << std::endl;
             });
 
@@ -50,19 +58,42 @@ namespace core
             g_thread = std::thread(UpdateLoop);
         }
 
+        /**
+         * @brief Updates the Discord Rich Presence activity status for the current player.
+         * @param state The player's current state (e.g., "Playing Tetris").
+         * @param details Additional details (e.g., "Score: 1000").
+         * @param large_image_key The asset key for the large image icon.
+         * @param large_image_text The text shown when hovering over the large image.
+         */
         void SetActivity(const char* state, const char* details, const char* large_image_key, const char* large_image_text)
         {
             std::lock_guard<std::mutex> lock(g_mutex);
-            if (!g_core) return;
+            if (!g_core)
+            {
+                return;
+            }
 
             discord::Activity activity{};
-            if (state) activity.SetState(state);
-            if (details) activity.SetDetails(details);
-            if (large_image_key) activity.GetAssets().SetLargeImage(large_image_key);
-            if (large_image_text) activity.GetAssets().SetLargeText(large_image_text);
+            if (state)
+            {
+                activity.SetState(state);
+            }
+            if (details)
+            {
+                activity.SetDetails(details);
+            }
+            if (large_image_key)
+            {
+                activity.GetAssets().SetLargeImage(large_image_key);
+            }
+            if (large_image_text)
+            {
+                activity.GetAssets().SetLargeText(large_image_text);
+            }
             activity.SetType(discord::ActivityType::Playing);
 
-            g_core->ActivityManager().UpdateActivity(activity, [](discord::Result result) {
+            g_core->ActivityManager().UpdateActivity(activity, [](discord::Result result)
+            {
                 if (result != discord::Result::Ok)
                 {
                     std::cerr << "Failed to update Discord activity! Error code: " << static_cast<int>(result) << std::endl;
@@ -70,6 +101,9 @@ namespace core
             });
         }
 
+        /**
+         * @brief Safely halts the background thread and cleans up the Discord SDK instance.
+         */
         void Shutdown()
         {
             g_running = false;
@@ -80,6 +114,7 @@ namespace core
             }
 
             std::lock_guard<std::mutex> lock(g_mutex);
+
             if (g_core)
             {
                 delete g_core;

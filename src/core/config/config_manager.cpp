@@ -2,11 +2,15 @@
 #include <fstream>
 #include <ncurses.h>
 
-namespace core {
+namespace core
+{
 
-ConfigManager::ConfigManager(const std::string& filepath) : m_filepath(filepath) {}
+ConfigManager::ConfigManager(const std::string& filepath) : m_filepath(filepath)
+{
+}
 
-void ConfigManager::SetDefaults(KeyBindings& bindings) {
+void ConfigManager::SetDefaults(KeyBindings& bindings)
+{
     bindings.keyLeft = KEY_LEFT;
     bindings.keyRight = KEY_RIGHT;
     bindings.keySoftDrop = KEY_DOWN;
@@ -17,40 +21,77 @@ void ConfigManager::SetDefaults(KeyBindings& bindings) {
     bindings.musicVolume = 100;
 }
 
-void ConfigManager::Load(KeyBindings& bindings) {
+void ConfigManager::Load(KeyBindings& bindings)
+{
     std::ifstream file(m_filepath);
-    if (!file.is_open()) {
+    if (!file.is_open())
+    {
         SetDefaults(bindings);
         Save(bindings);
         return;
     }
 
     std::string line;
-    while (std::getline(file, line)) {
-        if (line.empty() || line[0] == '[' || line[0] == ';') continue;
+    while (std::getline(file, line))
+    {
+        if (line.empty() || line[0] == '[' || line[0] == ';')
+        {
+            continue;
+        }
         size_t delimiterPos = line.find('=');
-        if (delimiterPos != std::string::npos) {
+        if (delimiterPos != std::string::npos)
+        {
             std::string key = line.substr(0, delimiterPos);
-            try {
+            try
+            {
                 int value = std::stoi(line.substr(delimiterPos + 1));
-                if (key == "Left") bindings.keyLeft = value;
-                else if (key == "Right") bindings.keyRight = value;
-                else if (key == "SoftDrop") bindings.keySoftDrop = value;
-                else if (key == "Rotate") bindings.keyRotate = value;
-                else if (key == "HardDrop") bindings.keyHardDrop = value;
-                else if (key == "Pause") bindings.keyPause = value;
-                else if (key == "Quit") bindings.keyQuit = value;
-                else if (key == "MusicVolume") bindings.musicVolume = value;
-            } catch (...) {
+                if (key == "Left")
+                {
+                    bindings.keyLeft = value;
+                }
+                else if (key == "Right")
+                {
+                    bindings.keyRight = value;
+                }
+                else if (key == "SoftDrop")
+                {
+                    bindings.keySoftDrop = value;
+                }
+                else if (key == "Rotate")
+                {
+                    bindings.keyRotate = value;
+                }
+                else if (key == "HardDrop")
+                {
+                    bindings.keyHardDrop = value;
+                }
+                else if (key == "Pause")
+                {
+                    bindings.keyPause = value;
+                }
+                else if (key == "Quit")
+                {
+                    bindings.keyQuit = value;
+                }
+                else if (key == "MusicVolume")
+                {
+                    bindings.musicVolume = value;
+                }
+            }
+            catch (...)
+            {
                 // Ignore invalid (corrupted) config values, rely on defaults
             }
         }
     }
 }
 
-void ConfigManager::Save(const KeyBindings& bindings) {
+void ConfigManager::Save(const KeyBindings& bindings)
+{
     std::ofstream file(m_filepath);
-    if (file.is_open()) {
+
+    if (file.is_open())
+    {
         file << "[Controls]\n";
         file << "Left=" << bindings.keyLeft << "\n";
         file << "Right=" << bindings.keyRight << "\n";
