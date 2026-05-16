@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(Tetris VERSION 1.0)
+project(Tetris VERSION 1.1)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -92,6 +92,11 @@ endif()
 if (ENABLE_DISCORD_RICH_PRESENCE)
     target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE ENABLE_DISCORD_RICH_PRESENCE)
 endif()
+
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
+    APP_VERSION=${CMAKE_PROJECT_VERSION}
+    APP_NAME=\"${CMAKE_PROJECT_NAME}\"
+)
 
 if (CMAKE_EXPORT_COMPILE_COMMANDS)
     execute_process(

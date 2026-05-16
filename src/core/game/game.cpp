@@ -105,7 +105,12 @@ void Game::RunMenu()
     int startX = COLS / 2 - 10;
     int startY = LINES / 2 - 2;
 
-    mvprintw(startY, startX + 5, "TETRIS");
+    // App Name and App Version passed macro preprocesser
+    std::string app_name = APP_NAME;
+    double app_version = APP_VERSION;
+    
+    std::transform(app_name.begin(), app_name.end(), app_name.begin(), ::toupper);
+    mvprintw(startY, startX + 5, "%s v%g", app_name.c_str(), app_version);
     mvprintw(startY + 2, startX - 2, "Press 'ENTER' to Start");
     mvprintw(startY + 3, startX - 2, "Press 'o' for Options");
     mvprintw(startY + 4, startX - 2, "Press 'q' to Quit");
@@ -185,7 +190,28 @@ void Game::RunOptions()
         }
         else if (i < 8)
         {
-            const char* keyNameStr = keyname(*(bindings[i - 1]));
+            // const char* keyNameStr = keyname(*(bindings[i - 1]));
+
+            int key = *(bindings[i - 1]);
+            const char* keyNameStr = nullptr;
+
+            // hardcoded since ESC, SPACE, and ENTER don't have proper names in ncurses keyname output
+            if (key == ' ')
+            {
+                keyNameStr = "SPACE";
+            }
+            else if (key == '\n')
+            {
+                keyNameStr = "ENTER";
+            }
+            else if (key == 27)
+            {
+                keyNameStr = "ESC";
+            }
+            else
+            {
+                keyNameStr = keyname(key);
+            }
 
             mvprintw(startY + 2 + i, startX, "%-15s %s", labels[i], (m_isBinding && m_optionIndex == i) ? "<PRESS KEY>" : (keyNameStr ? keyNameStr : "UNKNOWN"));
         }
