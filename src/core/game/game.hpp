@@ -2,6 +2,8 @@
 
 #include "core/config/config_manager.hpp"
 
+namespace core {
+
 enum class GameState
 {
     Menu,
@@ -60,6 +62,9 @@ private:
     int m_keyQuit;
     int m_optionIndex;
     bool m_isBinding;
+    int m_musicVolume;
     
     ConfigManager m_config;
 };
+
+} // namespace core

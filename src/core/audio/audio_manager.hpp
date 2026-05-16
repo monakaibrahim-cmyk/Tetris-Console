@@ -10,6 +10,8 @@ namespace core
         void PlayGameMusic();
         void PlayGameOverMusic();
         void StopMusic();
+        void SetMusicVolume(float volume);
+        float GetMusicVolume();
         
         void PlayClickSound();
         void PlayDropSound();

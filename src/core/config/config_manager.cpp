@@ -2,6 +2,8 @@
 #include <fstream>
 #include <ncurses.h>
 
+namespace core {
+
 ConfigManager::ConfigManager(const std::string& filepath) : m_filepath(filepath) {}
 
 void ConfigManager::SetDefaults(KeyBindings& bindings) {
@@ -12,6 +14,7 @@ void ConfigManager::SetDefaults(KeyBindings& bindings) {
     bindings.keyHardDrop = ' ';
     bindings.keyPause = 'p';
     bindings.keyQuit = 'q';
+    bindings.musicVolume = 100;
 }
 
 void ConfigManager::Load(KeyBindings& bindings) {
@@ -21,9 +24,6 @@ void ConfigManager::Load(KeyBindings& bindings) {
         Save(bindings);
         return;
     }
-
-    // Set fallback defaults just in case any keys are missing from the file
-    // SetDefaults(bindings);
 
     std::string line;
     while (std::getline(file, line)) {
@@ -40,6 +40,7 @@ void ConfigManager::Load(KeyBindings& bindings) {
                 else if (key == "HardDrop") bindings.keyHardDrop = value;
                 else if (key == "Pause") bindings.keyPause = value;
                 else if (key == "Quit") bindings.keyQuit = value;
+                else if (key == "MusicVolume") bindings.musicVolume = value;
             } catch (...) {
                 // Ignore invalid (corrupted) config values, rely on defaults
             }
@@ -58,5 +59,8 @@ void ConfigManager::Save(const KeyBindings& bindings) {
         file << "HardDrop=" << bindings.keyHardDrop << "\n";
         file << "Pause=" << bindings.keyPause << "\n";
         file << "Quit=" << bindings.keyQuit << "\n";
+        file << "MusicVolume=" << bindings.musicVolume << "\n";
     }
 }
+
+} // namespace core

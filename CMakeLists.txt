@@ -17,8 +17,6 @@ set(ASSET_FILES
 
 set(GENERATED_HEADERS)
 
-# file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/assets)
-
 foreach(FILE ${ASSET_FILES})
     get_filename_component(FILE_WE ${FILE} NAME_WE)
 
@@ -69,8 +67,11 @@ endif()
 add_dependencies(${CMAKE_PROJECT_NAME} generate_assets)
 
 find_package(Threads REQUIRED)
+
 set(CURSES_NEED_WIDE TRUE)
 find_package(Curses REQUIRED)
+
+set(SFML_STATIC_LIBRARIES TRUE)
 find_package(SFML COMPONENTS Audio System CONFIG REQUIRED)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Threads::Threads ${CURSES_LIBRARIES} SFML::Audio SFML::System)

@@ -2,6 +2,8 @@
 
 #include <string>
 
+namespace core {
+
 struct KeyBindings {
     int keyLeft;
     int keyRight;
@@ -10,6 +12,7 @@ struct KeyBindings {
     int keyHardDrop;
     int keyPause;
     int keyQuit;
+    int musicVolume;
 };
 
 class ConfigManager {
@@ -22,3 +25,5 @@ private:
     std::string m_filepath;
     void SetDefaults(KeyBindings& bindings);
 };
+
+} // namespace core

@@ -70,6 +70,18 @@ namespace core
             if (!g_initialized) return;
             g_bgm.stop();
         }
+        
+        void SetMusicVolume(float volume)
+        {
+            if (!g_initialized) return;
+            g_bgm.setVolume(volume);
+        }
+        
+        float GetMusicVolume()
+        {
+            if (!g_initialized) return 100.f;
+            return g_bgm.getVolume();
+        }
 
         void PlayClickSound() { if (g_initialized && g_clickSound) g_clickSound->play(); }
         void PlayDropSound() { if (g_initialized && g_dropSound) g_dropSound->play(); }

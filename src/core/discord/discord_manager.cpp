@@ -34,7 +34,7 @@ namespace core
 
         void Init()
         {
-            auto result = discord::Core::Create(DISCORD_CLIENT_ID, static_cast<std::uint64_t>(discord::CreateFlags::Default), &g_core);
+            auto result = discord::Core::Create(DISCORD_CLIENT_ID, static_cast<std::uint64_t>(discord::CreateFlags::NoRequireDiscord), &g_core);
 
             if (result != discord::Result::Ok || !g_core)
             {

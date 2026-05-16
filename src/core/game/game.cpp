@@ -13,6 +13,8 @@
 
 #include "core/audio/audio_manager.hpp"
 
+namespace core {
+
 const int TETROMINO[7][16] = {
     {0,0,0,0, 1,1,1,1, 0,0,0,0, 0,0,0,0}, // I
     {0,0,0,0, 0,1,1,0, 0,1,1,0, 0,0,0,0}, // O
@@ -24,7 +26,7 @@ const int TETROMINO[7][16] = {
 };
 
 Game::Game(const ConfigManager& config, const KeyBindings& bindings) : m_currentState(GameState::Menu), m_previousState(GameState::Menu), m_score(0), m_level(1), m_linesClearedTotal(0), m_currentPiece(0), m_currentRotation(0), m_currentX(0), m_currentY(0), m_nextPiece(0), m_dropTimer(0),
-               m_optionIndex(0), m_isBinding(false), m_config(config)
+               m_optionIndex(0), m_isBinding(false), m_musicVolume(bindings.musicVolume), m_config(config)
 {
     std::srand(std::time(nullptr));
 
@@ -116,22 +118,24 @@ void Game::RunMenu()
 void Game::RunOptions()
 {
     int startX = COLS / 2 - 15;
-    int startY = LINES / 2 - 5;
+    int startY = LINES / 2 - 6;
 
     mvprintw(startY, startX + 5, "OPTIONS / CONTROLS");
 
     const char* labels[] = {
-        "Move Left:", "Move Right:", "Rotate:", "Soft Drop:", "Hard Drop:", "Pause:", "Quit:", "Back"
+        "Music Volume:", "Move Left:", "Move Right:", "Rotate:", "Soft Drop:", "Hard Drop:", "Pause:", "Quit:", "Back"
     };
     int* bindings[] = {
         &m_keyLeft, &m_keyRight, &m_keyRotate, &m_keySoftDrop, &m_keyHardDrop, &m_keyPause, &m_keyQuit
     };
 
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 9; ++i) {
         if (i == m_optionIndex) attron(A_REVERSE);
 
-        if (i < 7) {
-            const char* keyNameStr = keyname(*(bindings[i]));
+        if (i == 0) {
+            mvprintw(startY + 2 + i, startX, "%-15s <%3d%%>", labels[i], m_musicVolume);
+        } else if (i < 8) {
+            const char* keyNameStr = keyname(*(bindings[i - 1]));
             mvprintw(startY + 2 + i, startX, "%-15s %s", labels[i], (m_isBinding && m_optionIndex == i) ? "<PRESS KEY>" : (keyNameStr ? keyNameStr : "UNKNOWN"));
         } else {
             mvprintw(startY + 2 + i, startX, "%s", labels[i]);
@@ -145,12 +149,12 @@ void Game::RunOptions()
     if (ch != ERR) {
         if (m_isBinding) {
             core::AudioManager::PlayClickSound();
-            *(bindings[m_optionIndex]) = ch;
+            *(bindings[m_optionIndex - 1]) = ch;
             m_isBinding = false;
             
             KeyBindings newBindings = {
                 m_keyLeft, m_keyRight, m_keySoftDrop,
-                m_keyRotate, m_keyHardDrop, m_keyPause, m_keyQuit
+                m_keyRotate, m_keyHardDrop, m_keyPause, m_keyQuit, m_musicVolume
             };
             m_config.Save(newBindings);
             
@@ -158,17 +162,39 @@ void Game::RunOptions()
         } else {
             if (ch == KEY_UP) {
                 core::AudioManager::PlayClickSound();
-                m_optionIndex = (m_optionIndex > 0) ? m_optionIndex - 1 : 7;
+                m_optionIndex = (m_optionIndex > 0) ? m_optionIndex - 1 : 8;
             } else if (ch == KEY_DOWN) {
                 core::AudioManager::PlayClickSound();
-                m_optionIndex = (m_optionIndex < 7) ? m_optionIndex + 1 : 0;
+                m_optionIndex = (m_optionIndex < 8) ? m_optionIndex + 1 : 0;
+            } else if (ch == KEY_LEFT && m_optionIndex == 0) {
+                if (m_musicVolume > 0) {
+                    m_musicVolume -= 5;
+                    core::AudioManager::SetMusicVolume(static_cast<float>(m_musicVolume));
+                    KeyBindings newBindings = {
+                        m_keyLeft, m_keyRight, m_keySoftDrop,
+                        m_keyRotate, m_keyHardDrop, m_keyPause, m_keyQuit, m_musicVolume
+                    };
+                    m_config.Save(newBindings);
+                    core::AudioManager::PlayClickSound();
+                }
+            } else if (ch == KEY_RIGHT && m_optionIndex == 0) {
+                if (m_musicVolume < 100) {
+                    m_musicVolume += 5;
+                    core::AudioManager::SetMusicVolume(static_cast<float>(m_musicVolume));
+                    KeyBindings newBindings = {
+                        m_keyLeft, m_keyRight, m_keySoftDrop,
+                        m_keyRotate, m_keyHardDrop, m_keyPause, m_keyQuit, m_musicVolume
+                    };
+                    m_config.Save(newBindings);
+                    core::AudioManager::PlayClickSound();
+                }
             } else if (ch == '\n') {
                 core::AudioManager::PlayClickSound();
-                if (m_optionIndex == 7) {
+                if (m_optionIndex == 8) {
                     m_currentState = m_previousState;
                     m_optionIndex = 0;
                     clear();
-                } else {
+                } else if (m_optionIndex > 0) {
                     m_isBinding = true;
                     clear();
                 }
@@ -490,7 +516,7 @@ void Game::RunPaused()
     mvprintw(startY, startX + 5, "PAUSED");
     mvprintw(startY + 2, startX - 4, "Press '%s' or ESC to Resume", keyname(m_keyPause));
     mvprintw(startY + 3, startX - 4, "Press 'o' for Options");
-    mvprintw(startY + 4, startX - 3, "Press '%s' to Quit to Menu", keyname(m_keyQuit));
+    mvprintw(startY + 4, startX - 4, "Press '%s' to Quit to Menu", keyname(m_keyQuit));
     refresh();
 
     int ch = getch();
@@ -541,6 +567,7 @@ void Game::RunGameOver()
 void Game::Run()
 {
     core::AudioManager::Init();
+    core::AudioManager::SetMusicVolume(static_cast<float>(m_musicVolume));
     core::AudioManager::PlayMenuMusic();
     UpdateDiscordPresence();
     clear();
@@ -558,3 +585,5 @@ void Game::Run()
 
     core::AudioManager::Shutdown();
 }
+
+} // namespace core
