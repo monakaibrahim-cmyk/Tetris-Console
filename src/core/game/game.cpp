@@ -199,6 +199,7 @@ void Game::RunOptions()
             attroff(A_REVERSE);
         }
     }
+    
     refresh();
 
     int ch = getch();
@@ -479,7 +480,7 @@ void Game::ClearLines()
             500,
             800
         };
-        
+
         int pointsEarned = lineScores[linesCleared] * m_level;
 
         // Check for Perfect Clear

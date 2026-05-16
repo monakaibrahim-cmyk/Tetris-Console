@@ -74,22 +74,27 @@ namespace core
             }
 
             discord::Activity activity{};
+
             if (state)
             {
                 activity.SetState(state);
             }
+
             if (details)
             {
                 activity.SetDetails(details);
             }
+
             if (large_image_key)
             {
                 activity.GetAssets().SetLargeImage(large_image_key);
             }
+            
             if (large_image_text)
             {
                 activity.GetAssets().SetLargeText(large_image_text);
             }
+
             activity.SetType(discord::ActivityType::Playing);
 
             g_core->ActivityManager().UpdateActivity(activity, [](discord::Result result)
