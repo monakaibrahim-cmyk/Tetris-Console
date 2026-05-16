@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS ON)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(ASSET_FILES
     background.mp3
     click.mp3
@@ -89,4 +91,12 @@ endif()
 
 if (ENABLE_DISCORD_RICH_PRESENCE)
     target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE ENABLE_DISCORD_RICH_PRESENCE)
+endif()
+
+if (CMAKE_EXPORT_COMPILE_COMMANDS)
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+                ${CMAKE_BINARY_DIR}/compile_commands.json
+                ${CMAKE_SOURCE_DIR}/compile_commands.json
+    )
 endif()
